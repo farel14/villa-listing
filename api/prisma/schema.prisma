@@ -1,0 +1,109 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum InquiryStatus {
+  NEW
+  CONTACTED
+  CONFIRMED
+  CANCELLED
+}
+
+model User {
+  id           String           @id @default(uuid())
+  email        String           @unique
+  passwordHash String
+  name         String
+  role         Role             @default(USER)
+  createdAt    DateTime         @default(now())
+  inquiries    BookingInquiry[]
+}
+
+model Region {
+  id     String  @id @default(uuid())
+  slug   String  @unique
+  nameTr String
+  nameEn String
+  villas Villa[]
+}
+
+model Feature {
+  id     String  @id @default(uuid())
+  slug   String  @unique
+  nameTr String
+  nameEn String
+  villas Villa[]
+}
+
+model Villa {
+  id            String           @id @default(uuid())
+  /// Public listing number shown next to the name, e.g. "Villa Lunaris (2273)"
+  code          Int              @unique @default(autoincrement())
+  slug          String           @unique
+  name          String
+  regionId      String
+  region        Region           @relation(fields: [regionId], references: [id])
+  district      String
+  descriptionTr String
+  descriptionEn String
+  /// Nightly starting price in Turkish lira (whole TRY)
+  pricePerNight Int
+  capacity      Int
+  bedrooms      Int
+  bathrooms     Int
+  images        String[]
+  isActive      Boolean          @default(true)
+  features      Feature[]
+  unavailable   Unavailability[]
+  inquiries     BookingInquiry[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([regionId])
+  @@index([pricePerNight])
+}
+
+/// Blocked date range. endDate is exclusive (the checkout day is free again).
+model Unavailability {
+  id        String   @id @default(uuid())
+  villaId   String
+  villa     Villa    @relation(fields: [villaId], references: [id], onDelete: Cascade)
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  note      String?
+
+  @@index([villaId, startDate, endDate])
+}
+
+/// A booking request that was handed off to WhatsApp.
+model BookingInquiry {
+  id           String        @id @default(uuid())
+  villaId      String
+  villa        Villa         @relation(fields: [villaId], references: [id], onDelete: Cascade)
+  userId       String?
+  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  checkIn      DateTime      @db.Date
+  checkOut     DateTime      @db.Date
+  guests       Int
+  nights       Int
+  /// Estimated total in TRY at the time of the request
+  totalPrice   Int
+  contactName  String
+  contactPhone String?
+  locale       String        @default("tr")
+  status       InquiryStatus @default(NEW)
+  createdAt    DateTime      @default(now())
+
+  @@index([villaId])
+  @@index([userId])
+}
