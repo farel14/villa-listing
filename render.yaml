@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: villa-api
+    runtime: node
+    plan: free
+    rootDir: api
+    buildCommand: npm ci && npx prisma generate && npx prisma migrate deploy && npm run build
+    startCommand: node dist/main.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN_SECONDS
+        value: "604800"
+      - key: WHATSAPP_NUMBER
+        value: "905000000000"
+      - key: FALLBACK_RATES_TRY_PER_UNIT
+        value: '{"USD":42,"EUR":49,"GBP":56}'
+      - key: CORS_ORIGIN
+        sync: false
+      - key: PUBLIC_WEB_URL
+        sync: false
+
+  - type: web
+    name: villa-web
+    runtime: node
+    plan: free
+    rootDir: web
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: API_URL
+        sync: false
